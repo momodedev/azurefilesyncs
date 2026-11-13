@@ -1,0 +1,24 @@
+{
+  "extendedLocation": null,
+  "id": "/subscriptions/8d6bd1eb-ae31-4f2c-856a-0f8e47115c4b/resourceGroups/rgafslab2611/providers/Microsoft.StorageSync/storageSyncServices/azssu6uodqr76fhiy/workflows/173c76c8-11c4-4eae-9a07-dea3c2878753",
+  "identity": null,
+  "kind": null,
+  "location": null,
+  "managedBy": null,
+  "name": "173c76c8-11c4-4eae-9a07-dea3c2878753",
+  "plan": null,
+  "properties": {
+    "commandName": "ICreateCloudEndpointWorkflow",
+    "createdTimestamp": "2026-11-12T06:30:52.158885Z",
+    "lastOperationId": "4580ff45-0cb1-42fd-a8fc-4d903e1fa02a",
+    "lastStatusTimestamp": "2026-11-12T06:36:00.291422Z",
+    "lastStepName": "newReplicaGroup",
+    "operation": "Do",
+    "status": "Aborted",
+    "steps": "[{\"name\":\"validateInput\",\"friendlyName\":\"validateInput\",\"status\":\"Succeeded\",\"error\":null},{\"name\":\"ensureStorageAccount\",\"friendlyName\":\"ensureStorageAccount\",\"status\":\"Succeeded\",\"error\":null},{\"name\":\"newCloudEndpoint\",\"friendlyName\":\"newCloudEndpoint\",\"status\":\"Succeeded\",\"error\":null},{\"name\":\"newReplicaGroup\",\"friendlyName\":\"newReplicaGroup\",\"status\":\"Failed\",\"error\":{\"error\":{\"code\":\"MgmtForbidden2\",\"message\":\"Failed to provision sync for cloud endpoint.\\r\\n\\r\\nAdditional information:\\r\\nError code: 0x80C83034\\r\\nError message: Azure File Sync is unable to access the storage account due to an authorization error.\",\"target\":\"Unknown\",\"details\":{\"httpErrorCode\":\"Forbidden\",\"exceptionType\":\"FilesCommon.Diagnostics.BackendException\",\"hashedMessage\":\"Failed to provision sync for cloud endpoint.\\r\\n\\r\\nAdditional information:\\r\\nError code: 0x80C83034\\r\\nError message: Azure File Sync is unable to access the storage account due to an authorization error.\"},\"innererror\":{\"message\":\"Failed to provision sync for cloud endpoint.\\r\\n\\r\\nAdditional information:\\r\\nError code: 0x80C83034\\r\\nError message: Azure File Sync is unable to access the storage account due to an authorization error.\",\"innerException\":\"Operation CreateReplicaGroup failed with error code: 'MgmtForbidden2'\"}}}},{\"name\":\"updateCloudEndpoint\",\"friendlyName\":\"updateCloudEndpoint\",\"status\":\"Initial\",\"error\":null},{\"name\":\"setFileShareMetadata\",\"friendlyName\":\"setFileShareMetadata\",\"status\":\"Initial\",\"error\":null}]"
+  },
+  "resourceGroup": "rgafslab2611",
+  "sku": null,
+  "tags": null,
+  "type": "Microsoft.StorageSync/storageSyncServices/workflows"
+}
