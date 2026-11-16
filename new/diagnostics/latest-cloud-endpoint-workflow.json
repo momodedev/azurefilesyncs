@@ -1,0 +1,24 @@
+{
+    "extendedLocation":  null,
+    "id":  "/subscriptions/95642268-5116-484d-9b88-7dfce8c20ce4/resourceGroups/rg-infra-winmig-apac-v-chengzhiz-poc/providers/Microsoft.StorageSync/storageSyncServices/afsspqipi42iyfdsq/workflows/7512611e-c6d9-417c-8959-e8dd3f1afa02",
+    "identity":  null,
+    "kind":  null,
+    "location":  null,
+    "managedBy":  null,
+    "name":  "7512611e-c6d9-417c-8959-e8dd3f1afa02",
+    "plan":  null,
+    "properties":  {
+                       "commandName":  "ICreateCloudEndpointWorkflow",
+                       "createdTimestamp":  "2026-11-16T07:55:54.1611081Z",
+                       "lastOperationId":  "35904008-1054-4392-890c-6026873babf4",
+                       "lastStatusTimestamp":  "2026-11-16T08:01:04.3832248Z",
+                       "lastStepName":  "newReplicaGroup",
+                       "operation":  "Do",
+                       "status":  "Aborted",
+                       "steps":  "[{\"name\":\"validateInput\",\"friendlyName\":\"validateInput\",\"status\":\"Succeeded\",\"error\":null},{\"name\":\"ensureStorageAccount\",\"friendlyName\":\"ensureStorageAccount\",\"status\":\"Succeeded\",\"error\":null},{\"name\":\"newCloudEndpoint\",\"friendlyName\":\"newCloudEndpoint\",\"status\":\"Succeeded\",\"error\":null},{\"name\":\"newReplicaGroup\",\"friendlyName\":\"newReplicaGroup\",\"status\":\"Failed\",\"error\":{\"error\":{\"code\":\"MgmtForbidden2\",\"message\":\"Failed to provision sync for cloud endpoint.\\r\\n\\r\\nAdditional information:\\r\\nError code: 0x80C83034\\r\\nError message: Azure File Sync is unable to access the storage account due to an authorization error.\",\"target\":\"Unknown\",\"details\":{\"httpErrorCode\":\"Forbidden\",\"exceptionType\":\"FilesCommon.Diagnostics.BackendException\",\"hashedMessage\":\"Failed to provision sync for cloud endpoint.\\r\\n\\r\\nAdditional information:\\r\\nError code: 0x80C83034\\r\\nError message: Azure File Sync is unable to access the storage account due to an authorization error.\"},\"innererror\":{\"message\":\"Failed to provision sync for cloud endpoint.\\r\\n\\r\\nAdditional information:\\r\\nError code: 0x80C83034\\r\\nError message: Azure File Sync is unable to access the storage account due to an authorization error.\",\"innerException\":\"Operation CreateReplicaGroup failed with error code: \u0027MgmtForbidden2\u0027\"}}}},{\"name\":\"updateCloudEndpoint\",\"friendlyName\":\"updateCloudEndpoint\",\"status\":\"Initial\",\"error\":null},{\"name\":\"setFileShareMetadata\",\"friendlyName\":\"setFileShareMetadata\",\"status\":\"Initial\",\"error\":null}]"
+                   },
+    "resourceGroup":  "rg-infra-winmig-apac-v-chengzhiz-poc",
+    "sku":  null,
+    "tags":  null,
+    "type":  "Microsoft.StorageSync/storageSyncServices/workflows"
+}

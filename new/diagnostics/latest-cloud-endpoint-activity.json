@@ -1,0 +1,20 @@
+[
+    {
+        "eventTimestamp":  "2026-11-13T14:18:20.8016259Z",
+        "operation":  "Microsoft.StorageSync/storageSyncServices/syncGroups/cloudEndpoints/write",
+        "status":  "Failed",
+        "correlationId":  "cc3cd7f5-49a2-4526-ac71-9d2b652737bf",
+        "operationId":  "3ca622f0-fdaf-4a20-a2cc-25067ed78a96",
+        "resourceId":  "/subscriptions/95642268-5116-484d-9b88-7dfce8c20ce4/resourceGroups/rg-infra-winmig-apac-v-chengzhiz-poc/providers/Microsoft.StorageSync/storageSyncServices/afsspqipi42iyfdsq/syncGroups/afsgpqipi42iyfdsq/cloudEndpoints/afscpqipi42iyfdsq",
+        "statusMessage":  "{\"status\":\"Failed\",\"error\":{\"code\":\"ResourceOperationFailure\",\"message\":\"The resource operation completed with terminal provisioning state \u0027Failed\u0027.\",\"details\":[{\"code\":\"MgmtFileShareAuthorizationFailed\",\"message\":\"Failed to check azure file share existence.\"}]}}"
+    },
+    {
+        "eventTimestamp":  "2026-11-16T08:01:17.2716446Z",
+        "operation":  "Microsoft.StorageSync/storageSyncServices/syncGroups/cloudEndpoints/write",
+        "status":  "Failed",
+        "correlationId":  "b02db1f5-b73d-4e1f-8042-9501516412f1",
+        "operationId":  "9c4c6fee-3001-4b92-b67d-6211c495abfd",
+        "resourceId":  "/subscriptions/95642268-5116-484d-9b88-7dfce8c20ce4/resourceGroups/rg-infra-winmig-apac-v-chengzhiz-poc/providers/Microsoft.StorageSync/storageSyncServices/afsspqipi42iyfdsq/syncGroups/afsgpqipi42iyfdsq/cloudEndpoints/afscpqipi42iyfdsq",
+        "statusMessage":  "MgmtForbidden2: Azure File Sync cannot access the storage account; error 0x80C83034 at newReplicaGroup."
+    }
+]

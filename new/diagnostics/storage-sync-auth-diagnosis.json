@@ -1,0 +1,72 @@
+{
+  "subscriptionId": "95642268-5116-484d-9b88-7dfce8c20ce4",
+  "tenantId": "0e478cd4-3e52-496d-ac3a-419ca58ba7ac",
+  "resourceGroup": "rg-infra-winmig-apac-v-chengzhiz-poc",
+  "storageAccount": "afspqipi42iyfdsq",
+  "fileShareName": "syncpqipi42iyfdsq",
+  "storageSyncServiceName": "afsspqipi42iyfdsq",
+  "storageSyncPrincipalId": "c0cf4d3b-7f88-4b9d-8a58-bf385741bef1",
+  "storageSyncService": {
+    "provisioningState": "Succeeded",
+    "useIdentity": true,
+    "incomingTrafficPolicy": "AllowAllTraffic",
+    "identityTenantId": "0e478cd4-3e52-496d-ac3a-419ca58ba7ac"
+  },
+  "identityRoles": [
+    {
+      "role": "Storage Account Contributor",
+      "scope": "storage account"
+    },
+    {
+      "role": "Storage File Data Privileged Contributor",
+      "scope": "SMB file share"
+    }
+  ],
+  "fileShare": {
+    "protocol": "SMB",
+    "quotaGiB": 32,
+    "exists": true
+  },
+  "storageAccountSettings": {
+    "publicNetworkAccess": "Enabled",
+    "allowSharedKeyAccess": true,
+    "defaultAction": "Allow",
+    "bypass": "None",
+    "ipRules": [],
+    "virtualNetworkRules": []
+  },
+  "previousEndpointFailure": {
+    "code": "MgmtFileShareAuthorizationFailed",
+    "message": "Failed to check azure file share existence.",
+    "correlationId": "cc3cd7f5-49a2-4526-ac71-9d2b652737bf",
+    "operationId": "3ca622f0-fdaf-4a20-a2cc-25067ed78a96",
+    "timestampUtc": "2026-11-13T14:18:20.8016259Z"
+  },
+  "endpointFailure": {
+    "code": "MgmtForbidden2",
+    "errorCode": "0x80C83034",
+    "message": "Azure File Sync is unable to access the storage account due to an authorization error.",
+    "failedStep": "newReplicaGroup",
+    "correlationId": "b02db1f5-b73d-4e1f-8042-9501516412f1",
+    "operationId": "9c4c6fee-3001-4b92-b67d-6211c495abfd",
+    "workflowId": "7512611e-c6d9-417c-8959-e8dd3f1afa02",
+    "workflowOperationId": "35904008-1054-4392-890c-6026873babf4",
+    "timestampUtc": "2026-11-16T08:01:17.2716446Z"
+  },
+  "policyEvidence": {
+    "noncompliantAudits": [
+      "Storage accounts should restrict network access using virtual network rules",
+      "Storage accounts should allow access from trusted Microsoft services",
+      "Storage accounts should restrict network access"
+    ],
+    "modifyActionCorrelationsObserved": [
+      "c9219c4e-b8f0-4392-93fd-f9faf1d5cbfd",
+      "28bb98d4-49fe-4988-b220-af17260f70e4",
+      "28bb98d4-49fe-4988-b220-af17260f70e4"
+    ],
+    "specificAssignmentForDisabledSettingsIdentified": false
+  },
+  "hostCreated": false,
+  "serverEndpointCreated": false,
+  "experimentRun": false
+}

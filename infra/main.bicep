@@ -22,9 +22,6 @@ param dataDiskSizeGiB int = 32
 @maxValue(5120)
 param shareQuotaGiB int = 100
 
-@description('Private DNS zone for the Storage Sync Service endpoints in the target Azure cloud.')
-param syncServicePrivateDnsZoneName string
-
 @description('Allow storage account key authentication.')
 param allowStorageSharedKeyAccess bool = false
 
@@ -33,7 +30,7 @@ param allowStorageSharedKeyAccess bool = false
   'Disabled'
   'Enabled'
 ])
-param storagePublicNetworkAccess string = 'Disabled'
+param storagePublicNetworkAccess string = 'Enabled'
 
 var resourceToken = uniqueString(subscription().id, resourceGroup().id, location, environmentName)
 var storageAccountName = 'azst${resourceToken}'
@@ -49,9 +46,6 @@ var nsgName = 'azns${resourceToken}'
 var nicName = 'azni${resourceToken}'
 var publicIpName = 'azpip${resourceToken}'
 var natGatewayName = 'aznat${resourceToken}'
-var storageFilePrivateEndpointName = 'azpef${resourceToken}'
-var syncServicePrivateEndpointName = 'azpea${resourceToken}'
-var storageFileDnsZoneName = 'privatelink.file.${environment().suffixes.storage}'
 var fileSyncAdminRoleId = '92b92042-07d9-4307-87f7-36a593fc5850'
 var storageAccountContributorRoleId = '17d1049b-9a84-46fb-8f53-869881c3d3ab'
 var storageFileDataPrivilegedContributorRoleId = '69566ab7-960f-475b-8e7c-b3118f30c6bd'
@@ -179,7 +173,6 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2024-05-01' = {
         '10.91.0.0/16'
       ]
     }
-    privateEndpointVNetPolicies: 'Disabled'
     subnets: [
       {
         name: 'AzureBastionSubnet'
@@ -188,7 +181,7 @@ resource virtualNetwork 'Microsoft.Network/virtualNetworks@2024-05-01' = {
           networkSecurityGroup: {
             id: resourceId('Microsoft.Network/networkSecurityGroups', '${vnetName}-AzureBastionSubnet-nsg-eastus')
           }
-          privateEndpointNetworkPolicies: 'Disabled'
+          privateEndpointNetworkPolicies: 'Enabled'
           privateLinkServiceNetworkPolicies: 'Enabled'
         }
       }
@@ -215,127 +208,13 @@ resource subnet 'Microsoft.Network/virtualNetworks/subnets@2024-05-01' = {
   name: subnetName
   properties: {
     addressPrefix: '10.91.1.0/24'
-    privateEndpointNetworkPolicies: 'Disabled'
+    privateEndpointNetworkPolicies: 'Enabled'
     networkSecurityGroup: {
       id: networkSecurityGroup.id
     }
     natGateway: {
       id: natGateway.id
     }
-  }
-}
-
-resource storageFilePrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
-  name: storageFileDnsZoneName
-  location: 'global'
-  tags: labTags
-}
-
-resource syncServicePrivateDnsZone 'Microsoft.Network/privateDnsZones@2020-06-01' = {
-  name: syncServicePrivateDnsZoneName
-  location: 'global'
-  tags: labTags
-}
-
-resource storageFilePrivateDnsLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
-  parent: storageFilePrivateDnsZone
-  name: '${vnetName}-link'
-  location: 'global'
-  properties: {
-    registrationEnabled: false
-    virtualNetwork: {
-      id: virtualNetwork.id
-    }
-  }
-}
-
-resource syncServicePrivateDnsLink 'Microsoft.Network/privateDnsZones/virtualNetworkLinks@2020-06-01' = {
-  parent: syncServicePrivateDnsZone
-  name: '${vnetName}-link'
-  location: 'global'
-  properties: {
-    registrationEnabled: false
-    virtualNetwork: {
-      id: virtualNetwork.id
-    }
-  }
-}
-
-resource storageFilePrivateEndpoint 'Microsoft.Network/privateEndpoints@2024-05-01' = {
-  name: storageFilePrivateEndpointName
-  location: location
-  tags: labTags
-  properties: {
-    isIPv6EnabledPrivateEndpoint: false
-    subnet: {
-      id: subnet.id
-    }
-    privateLinkServiceConnections: [
-      {
-        name: '${storageFilePrivateEndpointName}-connection'
-        properties: {
-          privateLinkServiceId: storageAccount.id
-          groupIds: [
-            'file'
-          ]
-          requestMessage: 'Azure File Sync lab private endpoint.'
-        }
-      }
-    ]
-  }
-}
-
-resource storageFilePrivateEndpointDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2024-05-01' = {
-  parent: storageFilePrivateEndpoint
-  name: 'default'
-  properties: {
-    privateDnsZoneConfigs: [
-      {
-        name: 'fileZone'
-        properties: {
-          privateDnsZoneId: storageFilePrivateDnsZone.id
-        }
-      }
-    ]
-  }
-}
-
-resource syncServicePrivateEndpoint 'Microsoft.Network/privateEndpoints@2024-05-01' = {
-  name: syncServicePrivateEndpointName
-  location: location
-  tags: labTags
-  properties: {
-    isIPv6EnabledPrivateEndpoint: false
-    subnet: {
-      id: subnet.id
-    }
-    privateLinkServiceConnections: [
-      {
-        name: '${syncServicePrivateEndpointName}-connection'
-        properties: {
-          privateLinkServiceId: syncService.id
-          groupIds: [
-            'Afs'
-          ]
-          requestMessage: 'Azure File Sync lab private endpoint.'
-        }
-      }
-    ]
-  }
-}
-
-resource syncServicePrivateEndpointDnsZoneGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2024-05-01' = {
-  parent: syncServicePrivateEndpoint
-  name: 'default'
-  properties: {
-    privateDnsZoneConfigs: [
-      {
-        name: 'syncZone'
-        properties: {
-          privateDnsZoneId: syncServicePrivateDnsZone.id
-        }
-      }
-    ]
   }
 }
 
