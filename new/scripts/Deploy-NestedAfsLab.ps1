@@ -6,6 +6,7 @@ param(
     [string]$Location = 'westus2',
     [int]$EndpointWaitMinutes = 20,
     [switch]$SkipHost,
+    [switch]$SkipCloudEndpointCreation,
     [switch]$PreviewOnly,
     [switch]$SupportConfirmedRetry
 )
@@ -13,6 +14,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $templatePath = Join-Path $repoRoot 'infra\main.bicep'
+$hostTemplatePath = Join-Path $repoRoot 'infra\host.bicep'
 $parametersPath = Join-Path $repoRoot 'infra\main.parameters.json'
 $hostBootstrapPath = Join-Path $PSScriptRoot 'Initialize-HyperVHost.ps1'
 $nestedProvisionPath = Join-Path $PSScriptRoot 'Create-NestedServer.ps1'
@@ -54,10 +56,31 @@ function New-TemporaryParameters {
     return $path
 }
 
+function New-TemporaryHostParameters {
+    param([Parameter(Mandatory)][string]$AdminPassword)
+
+    $base = Get-Content -LiteralPath $parametersPath -Raw | ConvertFrom-Json
+    $data = [ordered]@{
+        '$schema' = $base.'$schema'
+        contentVersion = $base.contentVersion
+        parameters = [ordered]@{
+            location = $base.parameters.location
+            environmentName = $base.parameters.environmentName
+            vmSize = $base.parameters.vmSize
+            vmAdminUsername = $base.parameters.vmAdminUsername
+            vmAdminPassword = [pscustomobject]@{ value = $AdminPassword }
+        }
+    }
+    $path = Join-Path $env:TEMP "afs-nested-host-$([guid]::NewGuid().ToString('N')).parameters.json"
+    [System.IO.File]::WriteAllText($path, ($data | ConvertTo-Json -Depth 20), [System.Text.UTF8Encoding]::new($false))
+    return $path
+}
+
 function Invoke-DeploymentStage {
     param(
         [Parameter(Mandatory)][string]$Name,
         [Parameter(Mandatory)][string]$ParametersFile,
+        [Parameter(Mandatory)][string]$TemplateFile,
         [switch]$PreviewOnly
     )
 
@@ -66,7 +89,7 @@ function Invoke-DeploymentStage {
         'deployment', 'group', 'what-if',
         '--name', "$Name-preview",
         '--resource-group', $ResourceGroupName,
-        '--template-file', $templatePath,
+        '--template-file', $TemplateFile,
         '--parameters', "@$ParametersFile",
         '--subscription', $SubscriptionId,
         '--no-pretty-print'
@@ -81,7 +104,7 @@ function Invoke-DeploymentStage {
         'deployment', 'group', 'create',
         '--name', $Name,
         '--resource-group', $ResourceGroupName,
-        '--template-file', $templatePath,
+        '--template-file', $TemplateFile,
         '--parameters', "@$ParametersFile",
         '--subscription', $SubscriptionId,
         '--query', 'properties.provisioningState',
@@ -143,6 +166,31 @@ function Get-CloudEndpointState {
         }
         throw
     }
+}
+
+function Get-CloudEndpointForShare {
+    param(
+        [Parameter(Mandatory)][string]$SyncServiceId,
+        [Parameter(Mandatory)][string]$SyncGroupName,
+        [Parameter(Mandatory)][string]$StorageAccountId,
+        [Parameter(Mandatory)][string]$FileShareName
+    )
+
+    $collectionUri = "https://management.azure.com$SyncServiceId/syncGroups/$SyncGroupName/cloudEndpoints`?api-version=2022-09-01"
+    $json = Invoke-AzCli -Arguments @('rest', '--method', 'get', '--uri', $collectionUri, '--output', 'json')
+    $collection = ($json -join [Environment]::NewLine) | ConvertFrom-Json
+    $matches = @($collection.value | Where-Object {
+        $_.properties.azureFileShareName -ieq $FileShareName -and
+        $_.properties.storageAccountResourceId -ieq $StorageAccountId
+    })
+
+    if ($matches.Count -gt 1) {
+        throw "More than one cloud endpoint references file share '$FileShareName' in storage account '$StorageAccountId'; refusing to choose one."
+    }
+    if ($matches.Count -eq 1) {
+        return $matches[0]
+    }
+    return $null
 }
 
 function Get-EndpointWriteFailures {
@@ -250,11 +298,12 @@ if ($activeSubscription -ne $SubscriptionId) {
     [void](Invoke-AzCli -Arguments @('account', 'set', '--subscription', $SubscriptionId))
 }
 
-if (-not (Test-Path -LiteralPath $templatePath) -or -not (Test-Path -LiteralPath $parametersPath)) {
-    throw 'The Bicep template or parameter file is missing.'
+if (-not (Test-Path -LiteralPath $templatePath) -or -not (Test-Path -LiteralPath $hostTemplatePath) -or -not (Test-Path -LiteralPath $parametersPath)) {
+    throw 'A Bicep template or parameter file is missing.'
 }
 
 [void](Invoke-AzCli -Arguments @('bicep', 'build', '--file', $templatePath, '--outfile', (Join-Path $env:TEMP 'afs-nested-lab.json')))
+[void](Invoke-AzCli -Arguments @('bicep', 'build', '--file', $hostTemplatePath, '--outfile', (Join-Path $env:TEMP 'afs-nested-host.json')))
 $resourceGroupExists = (& az group exists --name $ResourceGroupName --subscription $SubscriptionId --output tsv).Trim()
 if ($resourceGroupExists -ne 'true') {
     Write-Host "Creating isolated resource group $ResourceGroupName..."
@@ -337,13 +386,29 @@ elseif ($primaryRecord) {
 if ($useExistingCloudDeployment) {
     $cloudOutputs = Get-DeploymentOutputs -Name $cloudDeploymentName
     $null = Assert-StorageAccountFileSyncAccess -StorageAccountName $cloudOutputs.storageAccountName.value
-    $existingEndpointId = "$($cloudOutputs.syncServiceId.value)/syncGroups/$($cloudOutputs.syncGroupName.value)/cloudEndpoints/$($cloudOutputs.cloudEndpointName.value)"
-    $existingEndpointState = Get-CloudEndpointState -ResourceId $existingEndpointId
-    if ($existingEndpointState -in @('Failed', 'Canceled')) {
-        Write-CloudEndpointEvidence -EndpointId $existingEndpointId -SyncServiceId $cloudOutputs.syncServiceId.value
-        throw "Existing endpoint is '$existingEndpointState'; no retry or host deployment was attempted. Resolve the authorization failure before rerunning."
+    $existingEndpoint = Get-CloudEndpointForShare `
+        -SyncServiceId $cloudOutputs.syncServiceId.value `
+        -SyncGroupName $cloudOutputs.syncGroupName.value `
+        -StorageAccountId $cloudOutputs.storageAccountId.value `
+        -FileShareName $cloudOutputs.fileShareName.value
+
+    if ($existingEndpoint) {
+        $existingEndpointId = $existingEndpoint.id
+        $existingEndpointState = Get-CloudEndpointState -ResourceId $existingEndpointId
+        if ($existingEndpointState -in @('Failed', 'Canceled')) {
+            Write-CloudEndpointEvidence -EndpointId $existingEndpointId -SyncServiceId $cloudOutputs.syncServiceId.value
+            throw "Existing endpoint is '$existingEndpointState'; no retry or host deployment was attempted. Resolve the failure before rerunning."
+        }
+        if ($existingEndpointState -ne 'Succeeded') {
+            throw "Existing cloud endpoint '$existingEndpointId' is '$existingEndpointState', not Succeeded; host deployment was not attempted."
+        }
+        Write-Host "Reusing provisioned cloud endpoint '$existingEndpointId'; endpoint creation is skipped."
     }
-    if (-not $existingEndpointState) {
+    else {
+        $existingEndpointId = "$($cloudOutputs.syncServiceId.value)/syncGroups/$($cloudOutputs.syncGroupName.value)/cloudEndpoints/$($cloudOutputs.cloudEndpointName.value)"
+        if ($SkipCloudEndpointCreation) {
+            throw "-SkipCloudEndpointCreation was specified, but no cloud endpoint matches storage account '$($cloudOutputs.storageAccountName.value)' and share '$($cloudOutputs.fileShareName.value)'. No endpoint request or host deployment was attempted."
+        }
         $previousFailures = @(Get-EndpointWriteFailures -ResourceId $existingEndpointId)
         if ($previousFailures.Count -and -not $SupportConfirmedRetry) {
             $evidencePath = Save-EndpointWriteFailure -Events $previousFailures
@@ -360,7 +425,7 @@ if (-not $useExistingCloudDeployment) {
     $placeholderPassword = "N7!$([guid]::NewGuid().ToString('N'))z"
     $cloudParametersPath = New-TemporaryParameters -DeployHost $false -AdminPassword $placeholderPassword -RdpSource '127.0.0.1/32'
     try {
-        Invoke-DeploymentStage -Name $cloudDeploymentName -ParametersFile $cloudParametersPath -PreviewOnly:$PreviewOnly
+        Invoke-DeploymentStage -Name $cloudDeploymentName -ParametersFile $cloudParametersPath -TemplateFile $templatePath -PreviewOnly:$PreviewOnly
     }
     finally {
         $placeholderPassword = $null
@@ -379,10 +444,32 @@ if (-not $useExistingCloudDeployment) {
     $storageAccountName = $cloudOutputs.storageAccountName.value
     $fileShareName = $cloudOutputs.fileShareName.value
     $null = Assert-StorageAccountFileSyncAccess -StorageAccountName $storageAccountName
-    $cloudEndpointId = "$syncServiceId/syncGroups/$syncGroupName/cloudEndpoints/$cloudEndpointName"
-    $endpointState = Get-CloudEndpointState -ResourceId $cloudEndpointId
+    $cloudEndpoint = Get-CloudEndpointForShare `
+        -SyncServiceId $syncServiceId `
+        -SyncGroupName $syncGroupName `
+        -StorageAccountId $storageAccountId `
+        -FileShareName $fileShareName
 
-    if (-not $endpointState) {
+    if ($cloudEndpoint) {
+        $cloudEndpointId = $cloudEndpoint.id
+        $endpointState = Get-CloudEndpointState -ResourceId $cloudEndpointId
+        if ($endpointState -ne 'Succeeded') {
+            if ($endpointState -in @('Failed', 'Canceled')) {
+                Write-CloudEndpointEvidence -EndpointId $cloudEndpointId -SyncServiceId $syncServiceId
+            }
+            throw "Existing cloud endpoint '$cloudEndpointId' is '$endpointState', not Succeeded. No endpoint write or host deployment was attempted."
+        }
+        Write-Host "Reusing provisioned cloud endpoint '$cloudEndpointId'; endpoint creation is skipped."
+    }
+    else {
+        $cloudEndpointId = "$syncServiceId/syncGroups/$syncGroupName/cloudEndpoints/$cloudEndpointName"
+        if ($SkipCloudEndpointCreation) {
+            throw "-SkipCloudEndpointCreation was specified, but no cloud endpoint matches storage account '$storageAccountName' and share '$fileShareName'. No endpoint request or host deployment was attempted."
+        }
+        $endpointState = Get-CloudEndpointState -ResourceId $cloudEndpointId
+    }
+
+    if (-not $cloudEndpoint -and -not $endpointState) {
         $previousFailures = @(Get-EndpointWriteFailures -ResourceId $cloudEndpointId)
         if ($previousFailures.Count -and -not $SupportConfirmedRetry) {
             $evidencePath = Save-EndpointWriteFailure -Events $previousFailures
@@ -445,18 +532,26 @@ if ($SkipHost) {
 $cloudOutputs = Get-DeploymentOutputs -Name $cloudDeploymentName
 $syncServiceId = $cloudOutputs.syncServiceId.value
 $syncGroupName = $cloudOutputs.syncGroupName.value
-$cloudEndpointName = $cloudOutputs.cloudEndpointName.value
-$cloudEndpointId = "$syncServiceId/syncGroups/$syncGroupName/cloudEndpoints/$cloudEndpointName"
+$cloudEndpoint = Get-CloudEndpointForShare `
+    -SyncServiceId $syncServiceId `
+    -SyncGroupName $syncGroupName `
+    -StorageAccountId $cloudOutputs.storageAccountId.value `
+    -FileShareName $cloudOutputs.fileShareName.value
+if (-not $cloudEndpoint) {
+    throw "No cloud endpoint matches storage account '$($cloudOutputs.storageAccountName.value)' and share '$($cloudOutputs.fileShareName.value)'; the Hyper-V host will not be created."
+}
+$cloudEndpointId = $cloudEndpoint.id
 $endpointState = Get-CloudEndpointState -ResourceId $cloudEndpointId
 if ($endpointState -ne 'Succeeded') {
     throw "The cloud endpoint is '$endpointState'; the Hyper-V host will not be created."
 }
+Write-Host "Confirmed provisioned cloud endpoint '$cloudEndpointId'; proceeding to the host stage."
 
 if ($PreviewOnly) {
     $previewIp = (Invoke-RestMethod -Uri 'https://api.ipify.org').ToString().Trim()
-    $previewParametersPath = New-TemporaryParameters -DeployHost $true -AdminPassword "N7!$([guid]::NewGuid().ToString('N'))z" -RdpSource "$previewIp/32"
+    $previewParametersPath = New-TemporaryHostParameters -AdminPassword "N7!$([guid]::NewGuid().ToString('N'))z"
     try {
-        Invoke-DeploymentStage -Name $hostDeploymentName -ParametersFile $previewParametersPath -PreviewOnly
+        Invoke-DeploymentStage -Name $hostDeploymentName -ParametersFile $previewParametersPath -TemplateFile $hostTemplatePath -PreviewOnly
     }
     finally {
         Remove-Item -LiteralPath $previewParametersPath -Force -ErrorAction SilentlyContinue
@@ -479,9 +574,9 @@ $credentialPath = Join-Path $credentialDirectory 'host-password.dpapi.txt'
 $encryptedPassword = ConvertTo-SecureString $hostPassword -AsPlainText -Force | ConvertFrom-SecureString
 [System.IO.File]::WriteAllText($credentialPath, $encryptedPassword, [System.Text.UTF8Encoding]::new($false))
 
-$hostParametersPath = New-TemporaryParameters -DeployHost $true -AdminPassword $hostPassword -RdpSource $rdpSource
+$hostParametersPath = New-TemporaryHostParameters -AdminPassword $hostPassword
 try {
-    Invoke-DeploymentStage -Name $hostDeploymentName -ParametersFile $hostParametersPath
+    Invoke-DeploymentStage -Name $hostDeploymentName -ParametersFile $hostParametersPath -TemplateFile $hostTemplatePath
 }
 finally {
     $hostPassword = $null

@@ -1,0 +1,19 @@
+AFSLAB_EXPERIMENT_STATUS=SUCCESS
+VM=afshpqipi42iyfdsq
+ServerEndpointPath=E:\filestosync
+SourceCsv=C:\ProgramData\AzureFileSyncOps\20261117-031832-results.csv
+MeasurementSource=Microsoft-FileSync-Agent/Telemetry event 9102
+Verification=Replayed revised telemetry parser against completed full-run events; no second workload generated.
+Phase,ConfiguredLimitKbps,SessionUploadMbps,SessionUploadedBytes,SessionDurationSeconds
+baseline,0,134.218,33554432,2
+throttled,500,0.511,33554432,525
+recovery,0,134.218,33554432,2
+RemainingNetworkLimits=0
+EndpointProvisioningState=Succeeded
+UploadHealth=Healthy
+DownloadHealth=Healthy
+PersistentFilesNotSyncing=0
+RegisteredServerAuthType=ManagedIdentity
+FinalVmPowerState=deallocated
+All selected upload sessions reported HResult=0.
+The original CSV's counter-derived rates are retained on the VM but are not used to verify throttling.
