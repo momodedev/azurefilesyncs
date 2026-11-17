@@ -4,6 +4,42 @@ This lab targets subscription `95642268-5116-484d-9b88-7dfce8c20ce4`, tenant `0e
 
 Microsoft documents that Azure File Sync uses outbound HTTPS for FileREST and sync traffic. See [Azure File Sync networking](https://learn.microsoft.com/azure/storage/file-sync/file-sync-networking-overview).
 
+## Approach 1 Native Schedule Experiment
+
+The attached Project Horizon runbook's Approach 1 is a native **10,000-Kbps, 06:00-22:00, every-day** network policy, not the earlier all-day 500-Kbps experiment. [Run-AfsNativeScheduleExperiment.ps1](scripts/Run-AfsNativeScheduleExperiment.ps1) implements a bounded lab validation with preflight health checks, `-WhatIf`, policy backup, event 9102 per-item checks, event 9121 HRESULT review, counter diagnostics, and unchanged agent-process verification. It never stops FileSyncSvc or installs Task Scheduler jobs.
+
+The existing server already had the exact intended policy, so the executed run used `-ReuseExistingPolicy`. All seven original schedule IDs were preserved; no policy was deleted or recreated. The server timezone is **UTC**, so its active window is **06:00-22:00 UTC**, not the operator PC's local time. No timezone was changed.
+
+On 2026-11-17, run `20261117-093510` uploaded **64 MiB in 53 seconds (10.13 Mbps)** with zero completed-session per-item errors and zero persistent errors. All four 16-MiB cloud files were verified, and one cloud/local SHA-256 pair matched using the VM managed identity. FileSyncSvc kept process ID 3324 throughout the test. See [detailed evidence](diagnostics/approach1-native-schedule-20261117.json).
+
+Azure reported Healthy with zero errors, but its health timestamp predated this run; current local upload/download session telemetry supplies the immediate post-run health evidence. An earlier attempt was rejected by an overly strict 9121 count check; the zero-HRESULT item bucket was investigated before the fresh successful run. The script now checks actual HRESULTs plus event 9102 PerItemErrorCount, not event presence alone. Raw diagnostic events are retained.
+
+**This is not full production-pilot acceptance.** The document's two-hour representative baseline, full business-hours observation, overnight automatic policy release/reactivation, backlog forecast, and SMB-latency/backup checks remain unverified. Fresh unthrottled baseline and explicit rollback were not run because they would require removing the pre-existing policy. The VM and original schedule were left running for continued observation; compute charges continue. Do not remove the existing policy without approval.
+
+To repeat from an authenticated Az PowerShell session on your PC at the workspace root, first preview:
+
+```powershell
+$source = Get-Content '.\new\scripts\Run-AfsNativeScheduleExperiment.ps1' -Raw
+$parameters = @{
+	ResourceGroupName = 'rg-infra-winmig-apac-v-chengzhiz-poc'
+	VMName = 'afshpqipi42iyfdsq'
+	CommandId = 'RunPowerShellScript'
+	ScriptString = "& {`n" + $source + "`n} -ReuseExistingPolicy -WhatIf"
+}
+$preview = Invoke-AzVMRunCommand @parameters
+$preview.Value | Select-Object Code, Message | Format-List
+```
+
+After reviewing the preview, execute during **06:00-21:00 server-local time** (the earlier cutoff avoids crossing the 22:00 boundary during this bounded test):
+
+```powershell
+$parameters.ScriptString = "& {`n" + $source + "`n} -ReuseExistingPolicy"
+$result = Invoke-AzVMRunCommand @parameters
+$result.Value | Select-Object Code, Message | Format-List
+```
+
+Expect `BOUNDED_LAB_VALIDATION_PASSED`, approximately 10 Mbps, and `ExistingPolicyReused=true`. Inspect StdErr as well as stdout. Evidence is written on the VM under `C:\ProgramData\AzureFileSyncOps\<runId>-native-schedule`. Run only one experiment at a time with unrelated writes paused. On a server with no existing limits, omitting `-ReuseExistingPolicy` enables baseline/scheduled/explicit-rollback phases; that is not an overnight automatic-boundary test. `-RetainPolicy` leaves a newly created policy only after successful validation. Reuse mode always preserves the original schedule.
+
 ## Deployment Gate
 
 The deployment script checks the target group for a `ReadOnly` lock before running Bicep what-if or creating resources. The cloud-only deployment has succeeded, creating the storage account, SMB share, Storage Sync service, sync group, and managed-identity role assignments. The host remains gated on a matching cloud endpoint reaching ARM state `Succeeded`. The host uses `infra/host.bicep`, which references the existing Sync Service and pre-created lab network resources. Pass `-SkipCloudEndpointCreation` to require reuse of the existing endpoint and prevent another endpoint request.

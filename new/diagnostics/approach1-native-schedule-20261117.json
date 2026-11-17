@@ -1,0 +1,79 @@
+{
+  "status": "BOUNDED_ACTIVE_WINDOW_LAB_VALIDATION_PASSED",
+  "sourceDocument": "Project_Horizon_Azure_File_Sync_Network_Throttling_Runbook.docx",
+  "approach": "Approach 1 - Native scheduled network limit",
+  "runId": "20261117-093510",
+  "vm": "afshpqipi42iyfdsq",
+  "computer": "afshpqipi42iyfd",
+  "subscription": "95642268-5116-484d-9b88-7dfce8c20ce4",
+  "resourceGroup": "rg-infra-winmig-apac-v-chengzhiz-poc",
+  "serverEndpoint": "E:\\filestosync",
+  "serverTimeZone": "UTC",
+  "schedule": {
+    "startHour": 6,
+    "endHour": 22,
+    "limitKbps": 10000,
+    "days": "Every day",
+    "existingPolicyReused": true,
+    "allSevenPolicyIdsUnchanged": true,
+    "policyIds": [
+      "{0BC42748-A446-4667-99AA-03EF99D674B2}",
+      "{2B940C46-A3A7-4DAD-8621-D60DD7299074}",
+      "{8F38D435-FDF2-48B5-BB6F-DED73809F1E9}",
+      "{B2BCD767-8B73-4072-9D29-9262F8D88820}",
+      "{AA3C20FC-4DF0-4C0A-8C48-813B1B65C6D2}",
+      "{86995B84-6F5E-4AE6-ADF7-62448C98362E}",
+      "{8EC3734F-0677-4636-A840-4F8D8E957344}"
+    ]
+  },
+  "measurement": {
+    "source": "Completed upload event 9102",
+    "uploadCompletedUtc": "2026-11-17T09:36:09.4045290Z",
+    "bytes": 67108864,
+    "durationSeconds": 53,
+    "throughputMbps": 10.13,
+    "hResult": 0,
+    "perItemErrorCount": 0,
+    "uploadPersistentErrors": 0,
+    "downloadPersistentErrors": 0
+  },
+  "service": {
+    "state": "Running",
+    "processId": 3324,
+    "processStartUtc": "2026-11-17T05:44:29.7268586Z",
+    "processUnchangedDuringExperiment": true,
+    "serviceRestarted": false,
+    "taskSchedulerUsed": false
+  },
+  "cloudVerification": {
+    "account": "afspqipi42iyfdsq",
+    "share": "syncpqipi42iyfdsq",
+    "directory": "20261117-093510-native-scheduled",
+    "verifiedFiles": ["file-1.bin", "file-2.bin", "file-3.bin", "file-4.bin"],
+    "eachFileBytes": 16777216,
+    "sampleFile": "file-1.bin",
+    "sampleSha256": "C0B1FC3ED9136EEF3BA3546009ED417553CC4DBA29D7573AE054672090C04F3B",
+    "cloudAndLocalSampleHashesMatch": true,
+    "authentication": "VM managed identity; OAuth FileREST with backup intent; no storage key"
+  },
+  "health": {
+    "azureReportedCombinedHealth": "Healthy",
+    "azureHealthTimestampUtc": "2026-11-17T09:18:16.3619435Z",
+    "azureHealthSnapshotPredatesExperiment": true,
+    "localPostRunUploadAndDownloadSessionsHaveZeroErrors": true,
+    "postRunDownloadSessionUtc": "2026-11-17T09:36:14.9730468Z",
+    "note": "Use current local session evidence for this run; Azure health publication lagged."
+  },
+  "guestEvidenceDirectory": "C:\\ProgramData\\AzureFileSyncOps\\20261117-093510-native-schedule",
+  "guestArtifacts": ["Before-Limits.json", "Before-Limits.clixml", "Results.csv", "scheduled-sessions.csv", "scheduled-counters.csv", "Evidence.json", "Telemetry.json"],
+  "diagnosticNote": "Earlier attempt 20261117-093123 was rejected by an overly strict event-9121 count check. The observed zero-HRESULT item bucket was investigated; final code validates 9121 HRESULTs together with 9102 PerItemErrorCount and endpoint health. Earlier generated files and logs were retained.",
+  "notVerified": [
+    "At least two hours of representative baseline load",
+    "Full business-hours observation",
+    "Automatic 22:00 release and 06:00 reactivation across clock boundaries",
+    "Fresh unthrottled baseline or rollback recovery; existing policy was not removed",
+    "Overnight backlog reduction and migration completion forecast",
+    "Customer SMB latency, backup, monitoring and restore acceptance"
+  ],
+  "finalVmState": "Running; pre-existing schedule preserved; compute charges continue"
+}
