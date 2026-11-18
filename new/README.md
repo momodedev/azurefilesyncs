@@ -8,9 +8,37 @@ Microsoft documents that Azure File Sync uses outbound HTTPS for FileREST and sy
 
 The attached Project Horizon runbook's Approach 1 is a native **10,000-Kbps, 06:00-22:00, every-day** network policy, not the earlier all-day 500-Kbps experiment. [Run-AfsNativeScheduleExperiment.ps1](scripts/Run-AfsNativeScheduleExperiment.ps1) implements a bounded lab validation with preflight health checks, `-WhatIf`, policy backup, event 9102 per-item checks, event 9121 HRESULT review, counter diagnostics, and unchanged agent-process verification. It never stops FileSyncSvc or installs Task Scheduler jobs.
 
-The existing server already had the exact intended policy, so the executed run used `-ReuseExistingPolicy`. All seven original schedule IDs were preserved; no policy was deleted or recreated. The server timezone is **UTC**, so its active window is **06:00-22:00 UTC**, not the operator PC's local time. No timezone was changed.
+The existing server already had the exact intended policy, so the executed runs used `-ReuseExistingPolicy`. All seven original schedule IDs were preserved; no policy was deleted or recreated. The VM's current timezone is **China Standard Time**, and the active window is **06:00-22:00 in the VM's local time**. Check `(Get-TimeZone).Id` and `(Get-Date)` each time before testing; an earlier experiment captured UTC, so the VM timezone has changed since that run. Do not infer the schedule timezone from the operator PC or a previous run.
 
 On 2026-11-17, run `20261117-093510` uploaded **64 MiB in 53 seconds (10.13 Mbps)** with zero completed-session per-item errors and zero persistent errors. All four 16-MiB cloud files were verified, and one cloud/local SHA-256 pair matched using the VM managed identity. FileSyncSvc kept process ID 3324 throughout the test. See [detailed evidence](diagnostics/approach1-native-schedule-20261117.json).
+
+At 22:50 VM-local time, run `20261117-225021` verified operation **after** the configured end hour: **64 MiB in 3 seconds (178.957 Mbps)**. All four 16-MiB files were confirmed in Azure Files; a cloud/local SHA-256 matched. Event 9102 and the following download session reported zero HRESULT, per-item, and persistent errors. FileSyncSvc stayed Running with process ID 3324. The seven schedule IDs were unchanged. See [after-hours evidence](diagnostics/approach1-after-hours-20261117.json).
+
+On 2026-11-18, the new [inside-window experiment](scripts/Run-AfsNativeScheduleInsideWindowExperiment.ps1), run `20261118-091758`, uploaded **64 MiB in 54 seconds (9.942 Mbps)** at 09:17 China Standard Time. All four 16-MiB cloud files were confirmed and one cloud/local SHA-256 matched. Event 9102 reported `HResult=0` and `PerItemErrorCount=0`; the following download session also succeeded. FileSyncSvc stayed Running with process ID 3284 and all seven existing policy IDs were preserved. See [inside-window evidence](diagnostics/approach1-inside-window-20261118.json).
+
+To repeat from the workspace root using Az PowerShell, preview the new file first:
+
+```powershell
+$source = Get-Content '.\new\scripts\Run-AfsNativeScheduleInsideWindowExperiment.ps1' -Raw
+$parameters = @{
+	ResourceGroupName = 'rg-infra-winmig-apac-v-chengzhiz-poc'
+	VMName = 'afshpqipi42iyfdsq'
+	CommandId = 'RunPowerShellScript'
+	ScriptString = "& {`n" + $source + "`n} -WhatIf"
+}
+$preview = Invoke-AzVMRunCommand @parameters
+$preview.Value | Select-Object Code, Message | Format-List
+```
+
+After reviewing the preview, execute during 06:00-20:59 **server-local time**:
+
+```powershell
+$parameters.ScriptString = "& {`n" + $source + "`n}"
+$result = Invoke-AzVMRunCommand @parameters
+$result.Value | Select-Object Code, Message | Format-List
+```
+
+The new script refuses to run outside the window or unless the existing seven 06:00-22:00, 10,000-Kbps schedule entries match. It creates a unique workload, confirms the full 64-MiB transfer through event 9102, checks upload throughput and per-item errors, verifies schedule IDs and FileSyncSvc process continuity, and stores its evidence under `C:\ProgramData\AzureFileSyncOps\<runId>-native-inside-window`. It never replaces existing limits or stops the agent. The ARM endpoint-health timestamp can lag; compare it with current local telemetry.
 
 Azure reported Healthy with zero errors, but its health timestamp predated this run; current local upload/download session telemetry supplies the immediate post-run health evidence. An earlier attempt was rejected by an overly strict 9121 count check; the zero-HRESULT item bucket was investigated before the fresh successful run. The script now checks actual HRESULTs plus event 9102 PerItemErrorCount, not event presence alone. Raw diagnostic events are retained.
 
@@ -39,6 +67,20 @@ $result.Value | Select-Object Code, Message | Format-List
 ```
 
 Expect `BOUNDED_LAB_VALIDATION_PASSED`, approximately 10 Mbps, and `ExistingPolicyReused=true`. Inspect StdErr as well as stdout. Evidence is written on the VM under `C:\ProgramData\AzureFileSyncOps\<runId>-native-schedule`. Run only one experiment at a time with unrelated writes paused. On a server with no existing limits, omitting `-ReuseExistingPolicy` enables baseline/scheduled/explicit-rollback phases; that is not an overnight automatic-boundary test. `-RetainPolicy` leaves a newly created policy only after successful validation. Reuse mode always preserves the original schedule.
+
+To repeat the after-hours release sample from **22:00 through 05:59 VM-local time**, preview first and then execute with the additional `-OutsideWindowTest` switch:
+
+```powershell
+$parameters.ScriptString = "& {`n" + $source + "`n} -ReuseExistingPolicy -OutsideWindowTest -WhatIf"
+$preview = Invoke-AzVMRunCommand @parameters
+$preview.Value | Select-Object Code, Message | Format-List
+
+$parameters.ScriptString = "& {`n" + $source + "`n} -ReuseExistingPolicy -OutsideWindowTest"
+$result = Invoke-AzVMRunCommand @parameters
+$result.Value | Select-Object Code, Message | Format-List
+```
+
+Expect `BOUNDED_OUTSIDE_WINDOW_VALIDATION_PASSED`, complete successful upload telemetry, and more than 12.5 Mbps. This verifies one after-hours sample, not the exact 22:00 transition or a full overnight backlog-recovery window. The existing policy is never removed, replaced, or recreated in either reuse mode.
 
 ## Deployment Gate
 

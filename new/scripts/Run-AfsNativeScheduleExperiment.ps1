@@ -44,14 +44,14 @@ if (-not $OutsideWindowTest -and ($now.Hour -lt 6 -or $now.Hour -ge 21)) {
 $telemetryLog = 'Microsoft-FileSync-Agent/Telemetry'
 if (-not (Get-WinEvent -ListLog $telemetryLog).IsEnabled) { throw 'NO-GO: telemetry log disabled.' }
 try {
-    $recentErrors = @(Get-WinEvent -FilterHashtable @{LogName=$telemetryLog; Id=9121; StartTime=$now.AddMinutes(-30)} -ErrorAction Stop)
+    $recentSummaries = @(Get-WinEvent -FilterHashtable @{LogName=$telemetryLog; Id=9121; StartTime=$now.AddMinutes(-30)} -ErrorAction Stop)
 }
 catch {
     if ($_.FullyQualifiedErrorId -notlike 'NoMatchingEventsFound*') { throw }
-    $recentErrors = @()
+    $recentSummaries = @()
 }
-foreach ($event in $recentErrors) {
-    $xml = [xml]$event.ToXml()
+foreach ($record in $recentSummaries) {
+    $xml = [xml]$record.ToXml()
     $data = @{}
     foreach ($item in $xml.Event.EventData.Data) { $data[$item.Name] = $item.InnerText }
     Assert-NoPerItemErrors -Data $data
@@ -107,17 +107,17 @@ function Add-NativeLimits {
 function Read-UploadSessions {
     param([datetime]$Since)
     try {
-        $events = @(Get-WinEvent -FilterHashtable @{LogName=$telemetryLog; Id=9102,9121; StartTime=$Since} -ErrorAction Stop)
+        $records = @(Get-WinEvent -FilterHashtable @{LogName=$telemetryLog; Id=9102,9121; StartTime=$Since} -ErrorAction Stop)
     }
     catch {
         if ($_.FullyQualifiedErrorId -like 'NoMatchingEventsFound*') { return }
         throw
     }
-    foreach ($event in $events) {
-        $xml = [xml]$event.ToXml()
+    foreach ($record in $records) {
+        $xml = [xml]$record.ToXml()
         $data = @{}
         foreach ($item in $xml.Event.EventData.Data) { $data[$item.Name] = $item.InnerText }
-        if ($event.Id -eq 9121) {
+        if ($record.Id -eq 9121) {
             Assert-NoPerItemErrors -Data $data
             continue
         }
@@ -126,7 +126,7 @@ function Read-UploadSessions {
         }
         if ([double]$data.TransferredBytes -gt 0 -and [double]$data.UploadSyncBatchDataDurationMs -gt 0) {
             [pscustomobject]@{
-                TimeUtc = $event.TimeCreated.ToUniversalTime().ToString('o')
+                TimeUtc = $record.TimeCreated.ToUniversalTime().ToString('o')
                 Bytes = [long]$data.TransferredBytes
                 Seconds = [Math]::Max([double]$data.DurationSeconds, [double]$data.UploadSyncBatchDataDurationMs / 1000)
                 PerItemErrorCount = [long]$data.PerItemErrorCount

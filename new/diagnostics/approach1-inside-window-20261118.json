@@ -1,0 +1,67 @@
+{
+  "status": "BOUNDED_INSIDE_WINDOW_VALIDATION_PASSED",
+  "runId": "20261118-091758",
+  "vm": "afshpqipi42iyfdsq",
+  "computer": "afshpqipi42iyfd",
+  "resourceGroup": "rg-infra-winmig-apac-v-chengzhiz-poc",
+  "serverTimeZone": "China Standard Time",
+  "phaseStartLocal": "2026-11-18T09:17:58.0551584+08:00",
+  "phaseFinishLocal": "2026-11-18T09:19:00.0619761+08:00",
+  "schedule": {
+    "window": "06:00-22:00 every day",
+    "limitKbps": 10000,
+    "allSevenExistingPolicyIdsPreserved": true,
+    "policyIds": [
+      "{0BC42748-A446-4667-99AA-03EF99D674B2}",
+      "{2B940C46-A3A7-4DAD-8621-D60DD7299074}",
+      "{8F38D435-FDF2-48B5-BB6F-DED73809F1E9}",
+      "{B2BCD767-8B73-4072-9D29-9262F8D88820}",
+      "{AA3C20FC-4DF0-4C0A-8C48-813B1B65C6D2}",
+      "{86995B84-6F5E-4AE6-ADF7-62448C98362E}",
+      "{8EC3734F-0677-4636-A840-4F8D8E957344}"
+    ]
+  },
+  "measurement": {
+    "phase": "insideWindow",
+    "source": "Azure File Sync completed upload session Event 9102",
+    "bytes": 67108864,
+    "durationSeconds": 54,
+    "throughputMbps": 9.942,
+    "hResult": 0,
+    "perItemErrorCount": 0,
+    "uploadUtc": "2026-11-18T01:18:57.8371746Z"
+  },
+  "service": {
+    "state": "Running",
+    "processId": 3284,
+    "unchangedDuringRun": true,
+    "restarted": false
+  },
+  "cloudVerification": {
+    "account": "afspqipi42iyfdsq",
+    "share": "syncpqipi42iyfdsq",
+    "directory": "20261118-091758-native-insideWindow",
+    "files": [
+      {"name":"file-1.bin","bytes":16777216},
+      {"name":"file-2.bin","bytes":16777216},
+      {"name":"file-3.bin","bytes":16777216},
+      {"name":"file-4.bin","bytes":16777216}
+    ],
+    "sampleSha256File": "file-1.bin",
+    "sampleSha256": "4B323B287E6D41AB50050BA706B7F750DE4851A8F94E67740C4B5534BD6AFB75",
+    "cloudAndLocalHashMatch": true,
+    "authentication": "VM system-assigned managed identity with OAuth FileREST; no storage key"
+  },
+  "postRunAzureEndpointSnapshot": {
+    "provisioningState": "Succeeded",
+    "combinedHealth": "Healthy",
+    "persistentFilesNotSyncing": 0,
+    "uploadAndDownloadHealth": "Healthy",
+    "uploadAndDownloadPerItemErrors": 0,
+    "lastUpdatedTimestampUtc": "2026-11-18T01:03:13.6380654Z",
+    "note": "Portal/ARM health snapshot predates this run. Local Event 9102 upload and subsequent download sessions after the run both report HResult=0 and PerItemErrorCount=0."
+  },
+  "guestEvidenceDirectory": "C:\\ProgramData\\AzureFileSyncOps\\20261118-091758-native-inside-window",
+  "fullProductionPilot": "Not completed: representative baseline, all-day observation, overnight backlog, and customer SMB latency remain separate checks.",
+  "finalVmState": "Running; original seven schedules preserved; compute charges continue."
+}

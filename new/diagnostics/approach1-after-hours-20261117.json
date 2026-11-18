@@ -1,0 +1,73 @@
+{
+  "status": "BOUNDED_OUTSIDE_WINDOW_VALIDATION_PASSED",
+  "runId": "20261117-225021",
+  "vm": "afshpqipi42iyfdsq",
+  "computer": "afshpqipi42iyfd",
+  "resourceGroup": "rg-infra-winmig-apac-v-chengzhiz-poc",
+  "localTimeZone": "China Standard Time",
+  "localTimeAtCompletion": "2026-11-17T22:50:32.2221830+08:00",
+  "utcTimeAtCompletion": "2026-11-17T14:50:32.2241933Z",
+  "schedule": {
+    "hours": "06:00-22:00",
+    "days": "Every day",
+    "limitKbps": 10000,
+    "testOccurredOutsideWindow": true,
+    "allSevenExistingPolicyIdsPreserved": true,
+    "finalPolicyCount": 7,
+    "policyIds": [
+      "{0BC42748-A446-4667-99AA-03EF99D674B2}",
+      "{2B940C46-A3A7-4DAD-8621-D60DD7299074}",
+      "{8F38D435-FDF2-48B5-BB6F-DED73809F1E9}",
+      "{B2BCD767-8B73-4072-9D29-9262F8D88820}",
+      "{AA3C20FC-4DF0-4C0A-8C48-813B1B65C6D2}",
+      "{86995B84-6F5E-4AE6-ADF7-62448C98362E}",
+      "{8EC3734F-0677-4636-A840-4F8D8E957344}"
+    ]
+  },
+  "measurement": {
+    "phase": "outsideWindow",
+    "source": "Azure File Sync completed upload session Event 9102",
+    "bytes": 67108864,
+    "durationSeconds": 3,
+    "throughputMbps": 178.957,
+    "hResult": 0,
+    "perItemErrorCount": 0,
+    "uploadPersistentErrors": 0,
+    "downloadPersistentErrors": 0,
+    "uploadUtc": "2026-11-17T14:50:30.0426281Z"
+  },
+  "cloudVerification": {
+    "account": "afspqipi42iyfdsq",
+    "share": "syncpqipi42iyfdsq",
+    "directory": "20261117-225021-native-outsideWindow",
+    "files": [
+      {"name":"file-1.bin","bytes":16777216},
+      {"name":"file-2.bin","bytes":16777216},
+      {"name":"file-3.bin","bytes":16777216},
+      {"name":"file-4.bin","bytes":16777216}
+    ],
+    "sha256Sample": "file-1.bin",
+    "sha256": "B37D48C5AFCCB921DEFAD0E83A1AE6B68226C95554A1F586ECD60B7303A24A88",
+    "cloudAndLocalHashMatch": true,
+    "authentication": "VM system-assigned managed identity with OAuth FileREST; no storage key"
+  },
+  "service": {
+    "state": "Running",
+    "processId": 3324,
+    "unchangedFromBeforeExperiment": true,
+    "restarted": false
+  },
+  "postRunAzureEndpointHealth": {
+    "provisioningState": "Succeeded",
+    "combinedHealth": "Healthy",
+    "uploadHealth": "Healthy",
+    "downloadHealth": "Healthy",
+    "persistentFilesNotSyncing": 0,
+    "transientFilesNotSyncing": 0,
+    "uploadLastPerItemErrorCount": 0,
+    "lastUpdatedTimestampUtc": "2026-11-17T14:41:14.9529476Z"
+  },
+  "limitsRemovedOrChanged": false,
+  "experimentDirectoryOnVm": "C:\\ProgramData\\AzureFileSyncOps\\20261117-225021-native-schedule",
+  "caveat": "This verifies one bounded sample after the scheduled end, not the exact 22:00 boundary, a full overnight interval, backlog recovery, representative business load, or customer SMB latency."
+}
